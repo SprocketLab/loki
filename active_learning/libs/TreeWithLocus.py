@@ -57,7 +57,6 @@ class TreeWithLocus:
         2. create union set
         3. calculate length 
         '''
-        print(f"Calculating locus of lambda {self.lambda_}")
         unique_paths = self.get_all_unique_paths_in_lambda(self.lambda_)
         self.locus = self.create_union_set(unique_paths)
         self.set_lambda(list(self.locus.nodes))
