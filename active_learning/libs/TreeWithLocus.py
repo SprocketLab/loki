@@ -3,16 +3,12 @@ import numpy as np
 
 class TreeWithLocus:
     def __init__(self, n_nodes, n_init_lambda=3):
-        self.n_nodes = n_nodes
         self.tree = nx.random_tree(n=n_nodes)
         print("Generated tree")
         print(nx.forest_str(self.tree, sources=[0]))
-        self.lambda_ = sorted(np.random.choice(np.array(self.tree.nodes), n_init_lambda, replace=False))
-        self.locus = self.calc_locus(self.lambda_)
-        self.locus_length = len(self.locus)
-
-    def set_lambda(self, node_set):
-        self.lambda_ = node_set
+        self.set_lambda(sorted(np.random.choice(np.array(self.tree.nodes), n_init_lambda, replace=False)))
+        self.update_locus()
+        print(f"initial locus: {self.locus.nodes}, length: {len(self.locus.edges)}")
     
     def get_all_unique_paths_in_lambda(self, lambda_):
         paths = []
@@ -40,17 +36,22 @@ class TreeWithLocus:
         '''
         G_temp = nx.Graph()
         for i, path in enumerate(paths):
-            # print(path[0][0], path[-1][1])
             if G_temp.has_node(path[0][0]) and G_temp.has_node(path[-1][1]):
                 if nx.has_path(G_temp, path[0][0], path[-1][1]):
                     continue
             for edge in path:
-                # print(edge)
                 G_temp.add_edge(edge[0], edge[1])
-        return G_temp.edges
-        
+        return G_temp
+    
+    def set_lambda(self, node_list):
+        assert isinstance(node_list, list) 
+        self.lambda_ = node_list
+    
+    def add_node_to_lambda(self, node):
+        assert node not in self.lambda_
+        self.lambda_.append(node)
 
-    def calc_locus(self, nodes_arr):
+    def update_locus(self):
         '''
         1. get all unique_paths
         2. create union set
@@ -58,5 +59,6 @@ class TreeWithLocus:
         '''
         print(f"Calculating locus of lambda {self.lambda_}")
         unique_paths = self.get_all_unique_paths_in_lambda(self.lambda_)
-        locus = self.create_union_set(unique_paths)
-        return locus
+        self.locus = self.create_union_set(unique_paths)
+        self.set_lambda(list(self.locus.nodes))
+        return self.locus
