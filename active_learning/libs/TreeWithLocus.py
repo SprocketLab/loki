@@ -8,7 +8,7 @@ class TreeWithLocus:
         print(nx.forest_str(self.tree, sources=[0]))
         self.set_lambda(sorted(np.random.choice(np.array(self.tree.nodes), n_init_lambda, replace=False)))
         self.update_locus()
-        print(f"initial locus: {self.locus.nodes}, length: {len(self.locus.edges)}")
+        print(f"initial locus: {self.locus.nodes}, length: {len(self.locus.nodes)}")
     
     def get_all_unique_paths_in_lambda(self, lambda_):
         paths = []
