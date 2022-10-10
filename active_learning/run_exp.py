@@ -13,9 +13,8 @@ def run_active_learning(tree):
         tree.add_node_to_lambda(next_node)
         tree.update_locus()
         locus_lengths.append(len(tree.locus.nodes))
-    while len(locus_lengths) < n_nodes:
+    while len(locus_lengths) < n_nodes-lambda_init_size:
         locus_lengths.append(locus_lengths[-1])
-    # print('RESULT WITH ACTIVE LEARNING', locus_lengths)
     return locus_lengths
 
 def run_random_selection(tree):
@@ -26,9 +25,8 @@ def run_random_selection(tree):
         tree.add_node_to_lambda(next_node)
         tree.update_locus()
         locus_lengths.append(len(tree.locus.nodes))
-    while len(locus_lengths) < n_nodes:
+    while len(locus_lengths) < n_nodes-lambda_init_size:
         locus_lengths.append(locus_lengths[-1])
-    # print('RESULT WITH RANDOM SELECTION', locus_lengths)
     return locus_lengths
 
 def plot_results(active_all, rnd_all):
@@ -37,13 +35,11 @@ def plot_results(active_all, rnd_all):
 
     active_all = np.mean(active_all, axis=0)
     rnd_all = np.mean(rnd_all, axis=0)
-    # plt.figure(figsize=(,8))
     plt.plot(active_all, label="Active learning")
     plt.plot(rnd_all, label="Random selection")
     plt.ylabel("Locus magnitude")
     plt.xlabel("# of selection")
-    xticks = ['' for i in range(lambda_init_size)]
-    xticks.extend([i-(lambda_init_size-1) for i in range(lambda_init_size, n_nodes+1)])
+    xticks = [i-(lambda_init_size-1) for i in range(lambda_init_size, n_nodes+1)]
     plt.xticks(range(0,len(xticks)), xticks)
     plt.tight_layout()
     plt.legend()
@@ -70,6 +66,4 @@ if __name__ == '__main__':
         active_conv_all.append(active_learning_convergence)
         rnd_conv_all.append(random_selection_convergence)
     plot_results(active_conv_all, rnd_conv_all)
-    # print(al_conv_all)
-    # print(rnd_conv_all)
     
