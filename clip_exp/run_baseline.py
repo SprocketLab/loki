@@ -44,6 +44,16 @@ def process_label(label_text):
         return label_text
     else:
         return " ".join(label_text.split("_"))
+    
+def check_mapping_equivalence(m1, m2):
+    if len(m2) != len(m2):
+        print("Different lengths")
+        return False
+    for key in m1:
+        if m2[key] != m1[key]:
+            print(key, m1[key], m2[key])
+            return False
+    return True
 
 if __name__ == '__main__':
     cifar100_test = utils.get_CIFAR100_test_set()
@@ -53,30 +63,37 @@ if __name__ == '__main__':
 
     tree_metric = TreeMetrics()
     T_pc, labels_id_pc = tree_metric.get_parent_child_graph()
-    T_hierarchy, labels_id_hierarchy = tree_metric.get_hierarchy_graph(class_to_idx)
-    label_text_pc = [f"a photo of a {process_label(idx_to_class[int(label_id)])}." for label_id in labels_id_pc]
-    label_text_hierarchy = [f"a photo of a {process_label(idx_to_class[int(label_id)])}." for label_id in labels_id_hierarchy]
+    T_hierarchy, labels_id_hierarchy, mapping = tree_metric.get_hierarchy_graph(class_to_idx)
+    print('checking cifar100 map vs hierarchy map equivalence',check_mapping_equivalence(idx_to_class, mapping))
+    label_text = [f"a photo of a {class_}." for class_ in class_to_idx]
+    # label_text_pc = [f"a photo of a {process_label(idx_to_class[int(label_id)])}." for label_id in labels_id_pc]
+    # label_text_hierarchy = [f"a photo of a {process_label(idx_to_class[int(label_id)])}." for label_id in labels_id_hierarchy]
 
-    logits_pc, y_true = get_logits(cifar100_test, label_text_pc)
-    preds_pc = get_preds(logits_pc)
-    logits_hierarchy, y_true = get_logits(cifar100_test, label_text_hierarchy)
-    preds_hierarchy = get_preds(logits_hierarchy)
+    logits, y_true = get_logits(cifar100_test, label_text)
+    preds = get_preds(logits)
+    # logits_hierarchy, y_true_hi = get_logits(cifar100_test, label_text)
+    # preds_hierarchy = get_preds(logits_hierarchy)
+    # print('hierarchy sanity check', (preds_hierarchy!=y_true_hi).mean())
+    # print('pc', (preds_pc!=y_true_hi).mean())
+    
+    # logits_complete, y_true_complete = get_logits(cifar100_test, label_text)
+    # preds_complete = get_preds(logits_complete)
 
-    error_rate_vanilla_1 = (preds_pc != y_true).mean()
-    print(f"argmax prediction + complete graph dist: {error_rate_vanilla_1}")
+    error_rate_vanilla = (preds != y_true).mean()
+    print(f"argmax prediction + complete graph dist: {error_rate_vanilla}")
 
-    argmax_dist_pc_tree = tree_metric.calc_tree_metric(T_pc, preds_pc, y_true)
-    argmax_dist_hierarchy_tree = tree_metric.calc_tree_metric(T_hierarchy, preds_hierarchy, y_true)
+    argmax_dist_pc_tree = tree_metric.calc_tree_metric(T_pc, preds, y_true)
+    argmax_dist_hierarchy_tree = tree_metric.calc_tree_metric(T_hierarchy, preds, y_true)
 
     squared_distance_matrix = tree_metric.compute_sq_dist_matrix(T_hierarchy, labels_id_hierarchy)
-    prediction_w_label_model = np.argmin(np.dot(logits_hierarchy, squared_distance_matrix), axis=1)
+    prediction_w_label_model = np.argmin(np.dot(logits, squared_distance_matrix), axis=1)
     tree_dist_hierarcy_tree = tree_metric.calc_tree_metric(T_hierarchy, prediction_w_label_model, y_true)
     print(f"argmax prediction + hierarchy tree dist: {argmax_dist_hierarchy_tree}")
     print(f"hierarchy tree prediction + hierarchy tree dist: {tree_dist_hierarcy_tree}")
 
 
     squared_distance_matrix = tree_metric.compute_sq_dist_matrix(T_pc, labels_id_pc)
-    prediction_w_label_model = np.argmin(np.dot(logits_pc, squared_distance_matrix), axis=1)
+    prediction_w_label_model = np.argmin(np.dot(logits, squared_distance_matrix), axis=1)
     tree_dist_pc_tree = tree_metric.calc_tree_metric(T_pc, prediction_w_label_model, y_true)
     print(f"argmax prediction + pc tree dist: {argmax_dist_pc_tree}")
     print(f"pc tree prediction + pc graph dist: {tree_dist_pc_tree}")

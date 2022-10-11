@@ -34,37 +34,34 @@ class TreeMetrics:
         
     def preprocess_class_name_list_to_class_idx(self, class_to_idx, subclasses):
         subclasses_ids = []
+        subclasses_names_corrected = []
         for class_ in subclasses:
             if class_ not in class_to_idx:
                 class_ = self.interpolate_to_available_key(class_, class_to_idx)
             subclasses_ids.append(class_to_idx[class_])
-        return subclasses_ids
-    
-    def preprocess_class_name_to_class_idx(self, class_to_idx, subclasses):
-        subclasses_ids = []
-        for class_ in subclasses:
-            if class_ not in class_to_idx:
-                class_ = self.interpolate_to_available_key(class_, class_to_idx)
-            subclasses_ids.append(class_to_idx[class_])
-        return subclasses_ids
+            subclasses_names_corrected.append(class_)
+        return subclasses_ids, subclasses_names_corrected
 
     def get_hierarchy_graph(self, class_to_idx):
         T = nx.Graph()
         T.add_node('root')
         labels = []
+        mapping = {}
         with open('../cifar100/cifar100_hierarchy.txt', 'r') as f:
             for line in f.readlines():
                 splitline = line.split('\t')
                 superclass = splitline[0]
                 subclasses = splitline[1].strip().split(', ')
-                subclasses = self.preprocess_class_name_list_to_class_idx(class_to_idx, subclasses)
-                labels += subclasses
+                subclasses_idx, subclasses_corrected = self.preprocess_class_name_list_to_class_idx(class_to_idx, subclasses)
+                labels += subclasses_idx
+                for i, sub_ in enumerate(subclasses_idx):
+                    mapping[sub_] = subclasses_corrected[i]
                 T.add_node(superclass)
                 T.add_edge('root', superclass)
-                T.add_nodes_from(subclasses)
-                T.add_edges_from([(subclass, superclass) for subclass in subclasses])
+                T.add_nodes_from(subclasses_idx)
+                T.add_edges_from([(subclass, superclass) for subclass in subclasses_idx])
         labels = np.array(labels)
-        return T, labels
+        return T, labels, mapping
     
     def get_parent_child_graph(self):
         T = nx.Graph()
