@@ -1,4 +1,4 @@
-from utils import utils, cifar100_labels
+from utils import utils
 import torch
 import clip
 from tqdm import tqdm
