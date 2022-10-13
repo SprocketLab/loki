@@ -2,6 +2,8 @@ from libs import TreeWithLocus, ActiveSelection, RandomSelection
 import copy
 from tqdm import tqdm
 import argparse
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -13,7 +15,7 @@ def run_active_learning(tree):
         tree.add_node_to_lambda(next_node)
         tree.update_locus()
         locus_lengths.append(len(tree.locus.nodes))
-    while len(locus_lengths) < n_nodes-lambda_init_size:
+    while len(locus_lengths) <= n_nodes-lambda_init_size:
         locus_lengths.append(locus_lengths[-1])
     return locus_lengths
 
@@ -25,7 +27,7 @@ def run_random_selection(tree):
         tree.add_node_to_lambda(next_node)
         tree.update_locus()
         locus_lengths.append(len(tree.locus.nodes))
-    while len(locus_lengths) < n_nodes-lambda_init_size:
+    while len(locus_lengths) <= n_nodes-lambda_init_size:
         locus_lengths.append(locus_lengths[-1])
     return locus_lengths
 
@@ -35,15 +37,23 @@ def plot_results(active_all, rnd_all):
 
     active_all = np.mean(active_all, axis=0)
     rnd_all = np.mean(rnd_all, axis=0)
-    plt.plot(active_all, label="Active learning")
-    plt.plot(rnd_all, label="Random selection")
-    plt.ylabel("Locus magnitude")
-    plt.xlabel("# of selection")
-    xticks = [i-(lambda_init_size-1) for i in range(lambda_init_size, n_nodes+1)]
-    plt.xticks(range(0,len(xticks)), xticks)
+    
+    ticksize=12
+    plt.rcParams["figure.figsize"] = (5,3.5)
+    plt.rcParams['xtick.labelsize'] = ticksize 
+    plt.rcParams['ytick.labelsize'] = ticksize 
+    linewidth = 4
+    fontsize=14
+    plt.plot(active_all, label="Active learning", linewidth=linewidth)
+    plt.plot(rnd_all, label="Random selections", linewidth=linewidth)
+    plt.ylabel("Locus size", fontsize=fontsize)
+    plt.xlabel("# of selections", fontsize=fontsize)
+    xticks = [i-lambda_init_size for i in range(lambda_init_size, n_nodes+1)]
+    plt.xticks(range(0,len(xticks)), xticks, rotation=45)
     plt.tight_layout()
     plt.legend()
-    plt.suptitle("Active learning vs. random selection",  y=1.)
+    plt.grid()
+    plt.suptitle("Active learning vs. random selections",  y=1., fontsize=fontsize)
     plt.savefig(f'results/n_{n_nodes}lambda_{lambda_init_size}.png')
 
 if __name__ == '__main__':
