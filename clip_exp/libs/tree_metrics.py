@@ -63,6 +63,9 @@ class TreeMetrics:
         labels = np.array(labels)
         return T, labels, mapping
     
+    def get_random_graph(self, n_nodes):
+        return nx.random_tree(n=n_nodes)
+    
     def get_parent_child_graph(self):
         T = nx.Graph()
         labels = []
