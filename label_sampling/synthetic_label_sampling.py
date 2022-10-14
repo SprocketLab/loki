@@ -83,9 +83,9 @@ def main(
     plt.tight_layout()
     plt.grid()
     plt.title('Locus size vs concentration parameter', fontsize=fontsize)
-    plt.savefig('locus_theta1.png', bbox_inches='tight')
-    np.savez('label_sampling_vector.npz', theta_list = theta_list,
-     locus_list = locus_list,  error_bar = error_bar)
+    plt.savefig('locus_theta.png', bbox_inches='tight')
+    # np.savez('label_sampling_vector.npz', theta_list = theta_list,
+    #  locus_list = locus_list,  error_bar = error_bar)
 
         
 
