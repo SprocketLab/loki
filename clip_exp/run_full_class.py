@@ -42,7 +42,7 @@ if __name__ == '__main__':
     prediction_w_label_model = np.argmin(np.dot(logits, squared_distance_matrix), axis=1)
     tree_dist_pc_tree = tree_metric.calc_tree_metric(T_pc, prediction_w_label_model, y_true)
     print("argmax prediction + pc tree dist: {}".format(argmax_dist_pc_tree))
-    print("pc tree prediction + pc tree dist: {}".forma(tree_dist_pc_tree))
+    print("pc tree prediction + pc tree dist: {}".format(tree_dist_pc_tree))
     print("error%: {}".format((prediction_w_label_model!=y_true).mean()))
     print("% relative improvement {}".format((tree_dist_pc_tree - argmax_dist_pc_tree)/argmax_dist_pc_tree))
     print("")
