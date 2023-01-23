@@ -1,0 +1,1 @@
+clip_model_str = 'RN50'
