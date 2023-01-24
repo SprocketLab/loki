@@ -4,3 +4,6 @@ __pycache__/
 
 # Model checkpoint dir
 fine_tuning/model_checkpoint
+
+**/wandb/*
+*.npy
