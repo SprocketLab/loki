@@ -11,6 +11,7 @@ from torch.utils.data import DataLoader
 import torch.nn as nn
 import torch.nn.functional as F
 from tqdm import tqdm
+import numpy as np
 
 batch_size = config.batch_size
 n_epoch = config.n_epoch
@@ -26,27 +27,55 @@ trainset = utils.get_CIFAR100_train_set()
 train_dataset = ImgTextPairDataset(trainset, preprocess)
 train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4)
   
+testset = utils.get_CIFAR100_test_set()
+test_dataset = ImgTextPairDataset(testset, preprocess)
+test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True, num_workers=4)
+
 def extract_label_text_features(model, label_text):
     label_features = []
     for label_t in label_text:
         texts = clip.tokenize(label_t).to(device)
         class_embeddings = model.encode_text(texts)
-        class_embeddings /= class_embeddings.norm(dim=-1, keepdim=True)
-        class_embedding = class_embeddings.mean(dim=0)
-        class_embedding /= class_embedding.norm()
-        label_features.append(class_embedding)
+        class_embeddings_normalized = class_embeddings / class_embeddings.norm(dim=-1, keepdim=True)
+        embedding = class_embeddings_normalized.mean(dim=0)
+        embedding_norm = embedding / embedding.norm()
+        label_features.append(embedding_norm)
     label_features = torch.stack(label_features, dim=1).to(device)
     return label_features
 
 def get_logits(model, images, label_text):
-    with torch.no_grad():
-        image_features_all = model.encode_image(images)
-    image_features_all /= image_features_all.norm(dim=0)
-    image_features_all = image_features_all.to(device)
+    image_features_all = []
+    for image in images:
+        with torch.no_grad():
+            image_feature_ = model.encode_image(image)
+        image_feature = image_feature_ / image_feature_.norm()
+        image_features_all.append(image_feature)
+    image_features_all = torch.stack(image_features_all, dim=1).to(device)
     image_features_all = image_features_all.squeeze()
     text_features_all = extract_label_text_features(model, label_text)
-    logits = (100. * image_features_all @ text_features_all).softmax(dim=-1)
+    logits = (100. * image_features_all @ text_features_all).softmax(dim=-1).detach().cpu()
     return logits
+    
+def evaluate(epoch, model):
+    class_to_idx = testset.class_to_idx
+    label_text = ["a photo of a {}.".format(class_) for class_ in class_to_idx]
+    model.eval()
+    preds_all = []
+    targets_all = []
+    with torch.no_grad():
+        for images, targets in tqdm(test_dataloader):
+            images = images.to(device)
+            targets_all.extend(targets.detach().cpu())
+            logits = get_logits(model, images, label_text)
+            preds = np.argmin(np.dot(logits.detach().cpu().numpy(), sq_distances.detach().cpu().numpy()), axis=1)
+            preds_all.extend(preds.tolist())
+    preds_all = np.asarray(preds_all)
+    targets_all = np.asarray(targets_all)
+    # print(preds_all.shape, targets_all.shape)
+    tree_dist = tree_metric.calc_tree_metric(T_hierarchy, preds_all, targets_all)
+    acc = (preds_all == targets_all).mean()
+    print("Epoch {} eval: tree dist = {:.3f} | acc = {:.3f}".format(epoch, tree_dist, acc))
+            
 
 k = len(trainset.classes)
 class_to_idx = trainset.class_to_idx
@@ -56,41 +85,40 @@ label_text = ["a photo of a {}.".format(class_) for class_ in class_to_idx]
 
 tree_metric = TreeMetrics()
 T_hierarchy, _, _ = tree_metric.get_hierarchy_graph(class_to_idx)
-distances = torch.Tensor(tree_metric.compute_dist_matrix(T_hierarchy, labels_id)).to(device)
-
+sq_distances = torch.FloatTensor(tree_metric.compute_dist_matrix(T_hierarchy, labels_id)).to(device)
+distances = torch.sqrt(sq_distances)
 loss_fn = nn.NLLLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=lr, betas=betas, eps=eps, weight_decay=weight_decay) #Params used from paper, the lr is smaller, more safe for fine tuning to new dataset
 
+#eval train (1 loop)
 for epoch in tqdm(range(n_epoch)):
+    evaluate(epoch, model)
     running_loss = 0.
-    running_corrects = 0
+    model.train()
     for images, targets in tqdm(train_dataloader):
         optimizer.zero_grad()
         images = images.to(device)
         targets = targets.to(device)
 
         logits = get_logits(model, images, label_text)
-        probs = logits.softmax(dim=1)
-        probs.to(device)
-        # distances is pairwise distance of labels in the tree. (idx have to be in order). dont square it.
+        probs = logits.softmax(dim=1).float()
         preds = loki_loss.loki_polytope_predict(probs, distances)
+        
         # Apply "label smoothing" to the hard predictions
-        # so that downstream loss remains well-defined
         eps = 0.001
-        smooth_onehot = torch.ones(k, k) * (1 / (k - 1)) * eps
-        smooth_onehot += torch.eye(k) * ((1 - eps) - (1 / (k - 1)) * eps)
+        with torch.no_grad():
+            smooth_onehot = (torch.ones(k, k) * (1 / (k - 1)) * eps) + (torch.eye(k) * ((1 - eps) - (1 / (k - 1)) * eps))
+        smooth_onehot = smooth_onehot.to(device)
         preds_smoothed = preds @ smooth_onehot
 
-        logs = torch.log(preds_smoothed).to(device)
+        logs = torch.log(preds_smoothed)
         loss = loss_fn(logs, targets)
         loss.backward()
         optimizer.step()
         running_loss += loss.item() * targets.size(0)
-        running_corrects += torch.sum(preds == targets.detach().cpu())
 
     epoch_loss = running_loss / len(train_dataset)
-    epoch_acc = running_corrects / len(train_dataset) * 100.
-    print("Epoch {} Loss: {:.3f} Train Acc: {:.3f}".format(epoch, epoch_loss, epoch_acc))
+    print("Epoch {} train loss: {:.3f}".format(epoch+1, epoch_loss))
 
 torch.save({
     'model_state_dict': model.state_dict(),

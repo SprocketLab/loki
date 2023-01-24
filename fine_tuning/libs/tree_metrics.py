@@ -12,7 +12,7 @@ class TreeMetrics:
             for j in range(i+1, len(labels)):
                 d[i, j] = nx.shortest_path_length(T, labels[i], labels[j])
                 d[j, i] = d[i, j]
-        return d
+        return np.square(d)
 
     def interpolate_to_available_key(self, class_, class_to_idx):
         if " " in class_:

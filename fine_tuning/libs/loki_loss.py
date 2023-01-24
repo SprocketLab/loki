@@ -1,6 +1,8 @@
 import torch
-import numpy as np
+# import numpy as np
 from torch.cuda.amp import autocast
+
+torch.autograd.set_detect_anomaly(True)
 
 def proj_simplex(y):
     ''' From http://www.mcduplessis.com/index.php/2016/08/22/fast-projection-onto-a-simplex-python/
@@ -27,7 +29,9 @@ def proj_simplex(y):
         
     k = bisectsearch()
     lam = (torch.sum(y[idx[k:]]) - 1) / (d - k)
-    x = np.maximum(0, y - lam)
+    x1 = torch.zeros(y.shape).cuda()
+    x2 = (y - lam).cuda()
+    x = torch.maximum(x1, x2)
     return x
 
 class LokiPolytopeEstimator(torch.autograd.Function):
@@ -36,14 +40,12 @@ class LokiPolytopeEstimator(torch.autograd.Function):
                 dists: torch.FloatTensor, eta: float):
         k = dists.shape[0]
         eta = torch.tensor(eta)
-        onehot = torch.eye(k)
+        onehot = torch.eye(k).cuda()
         
         # Compute S(x) = vector of negative Fréchet variances
-        # print(probs.shape)
-        # print(dists.shape)
-        with autocast():
-            s = -1 * probs @ torch.square(dists)
 
+        # with autocast():
+        s = -1 * probs @ torch.square(dists)
         # Intermediate decoding step
         with torch.no_grad():
             z_hat_int = s.argmax(dim=1)
@@ -67,7 +69,7 @@ class LokiPolytopeEstimator(torch.autograd.Function):
         # NOTE this is the actual projection but it's slower because it's
         # not batched! 
         b = z_unproj.shape[0]
-        z_proj = torch.stack([proj_simplex(z_unproj[i]) for i in range(b)])
+        z_proj = torch.stack([proj_simplex(z_unproj[i]) for i in range(b)]).cuda()
         
         delta_s = z_hat_onehot - z_proj
         return delta_s, None, None, None

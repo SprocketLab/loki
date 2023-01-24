@@ -11,5 +11,5 @@ class ImgTextPairDataset(Dataset):
 
     def __getitem__(self, idx):
         image, targets = self.dataset[idx]
-        image = self.preprocess(image)
+        image = self.preprocess(image).unsqueeze(0)
         return image, targets
