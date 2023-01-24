@@ -43,8 +43,6 @@ class LokiPolytopeEstimator(torch.autograd.Function):
         onehot = torch.eye(k).cuda()
         
         # Compute S(x) = vector of negative Fréchet variances
-
-        # with autocast():
         s = -1 * probs @ torch.square(dists)
         # Intermediate decoding step
         with torch.no_grad():
@@ -77,3 +75,29 @@ class LokiPolytopeEstimator(torch.autograd.Function):
 def loki_polytope_predict(probs, dists, eta=0.01):
     loki = LokiPolytopeEstimator()
     return loki.apply(probs, dists, eta)
+
+class LokiStraightThroughEstimator(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, probs: torch.FloatTensor, dists: torch.FloatTensor):
+        k = dists.shape[0]
+        onehot = torch.eye(k).cuda()
+        
+        # Compute S(x) = vector of negative Fréchet variances
+        s = -probs @ (dists ** 2)
+
+        # Intermediate decoding step
+        with torch.no_grad():
+            z_hat_int = s.argmax(dim=1)
+            z_hat_onehot = onehot[z_hat_int]
+
+        # Important to ensure that z_hat_smoothed gets gradients from the loss
+        z_hat_onehot.requires_grad = True
+        return z_hat_onehot
+    
+    @staticmethod
+    def backward(ctx, grad_output: torch.FloatTensor):
+        return grad_output, None, None
+    
+def loki_ste_predict(probs, dists):
+    loki = LokiStraightThroughEstimator()
+    return loki.apply(probs, dists)

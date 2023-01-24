@@ -1,3 +1,6 @@
+'''
+https://github.com/openai/CLIP#zero-shot-prediction
+'''
 from utils import utils
 import torch
 import clip
