@@ -101,7 +101,11 @@ class ImageNetSubset(pl.LightningDataModule):
         self.prepare_data()
         return DataLoader(self.validation_dataset, 
                           batch_size=self.test_batch_size)
-            
+
+
+class AnimalKingdon(pl.LightningDataModule):
+    pass
+
 
 def main():
     imagenet = ImageNetSubset()
