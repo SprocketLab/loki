@@ -53,25 +53,24 @@ def get_logits(model, images, label_text):
     image_features_all = torch.stack(image_features_all, dim=1).to(device)
     image_features_all = image_features_all.squeeze()
     text_features_all = extract_label_text_features(model, label_text)
-    logits = (100. * image_features_all @ text_features_all).softmax(dim=-1).detach().cpu()
-    return logits
+    logits = (100. * image_features_all @ text_features_all)
+    return logits.float()
     
 def evaluate(epoch, model):
+    model.eval()
     class_to_idx = testset.class_to_idx
     label_text = ["a photo of a {}.".format(class_) for class_ in class_to_idx]
-    model.eval()
     preds_all = []
     targets_all = []
     with torch.no_grad():
         for images, targets in tqdm(test_dataloader):
             images = images.to(device)
             targets_all.extend(targets.detach().cpu())
-            logits = get_logits(model, images, label_text)
+            logits = get_logits(model, images, label_text).softmax(dim=-1)
             preds = np.argmin(np.dot(logits.detach().cpu().numpy(), sq_distances.detach().cpu().numpy()), axis=1)
             preds_all.extend(preds.tolist())
     preds_all = np.asarray(preds_all)
     targets_all = np.asarray(targets_all)
-    # print(preds_all.shape, targets_all.shape)
     tree_dist = tree_metric.calc_tree_metric(T_hierarchy, preds_all, targets_all)
     acc = (preds_all == targets_all).mean()
     print("Epoch {} eval: tree dist = {:.3f} | acc = {:.3f}".format(epoch, tree_dist, acc))
