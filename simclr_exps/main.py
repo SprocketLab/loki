@@ -7,7 +7,11 @@ from datasets import ImageNetSubset
 from models import SingleLayerModel, SingleLayerLokiModel
 
 def main(data="imagenet", epochs=10, 
-         batch_size=128, test_batch_size=512, ste=False):
+         batch_size=128, test_batch_size=512, ste=False, negiden=False,
+         pretraining=True):
+    
+    print(f"USING STE={ste}")
+    print(f"USING NEGIDEN={negiden}")
     
     torch.set_float32_matmul_precision('medium')
     wandb_logger = WandbLogger(name='Nick', project='Loki')
@@ -27,19 +31,20 @@ def main(data="imagenet", epochs=10,
     valid_loader = dataset.val_dataloader()
     test_loader = dataset.test_dataloader()
 
-    print("⚡" * 20 + " TRAINING " + "⚡" * 20)
-    trainer = pl.Trainer(max_epochs=10, 
-                         enable_checkpointing=False, 
-                         accelerator="gpu", logger=wandb_logger)
-    trainer.fit(model, train_loader, valid_loader)
-    trainer.test(model, test_loader)
+    if pretraining:
+        print("⚡" * 20 + " TRAINING " + "⚡" * 20)
+        trainer = pl.Trainer(max_epochs=10, 
+                            enable_checkpointing=False, 
+                            accelerator="gpu", logger=wandb_logger)
+        trainer.fit(model, train_loader, valid_loader)
+        trainer.test(model, test_loader)
 
     print("⚡" * 20 + " FINE TUNING " + "⚡" * 20)
     model_ft = SingleLayerLokiModel(emb_size=dataset.emb_size, 
                                  k=dataset.num_classes,  
                                  dists=dataset.distance_matrix,
                                  model=model.model,
-                                 ste=ste)
+                                 ste=ste, negiden=negiden)
     trainer_ft = pl.Trainer(max_epochs=100_000, 
                          enable_checkpointing=False, 
                          accelerator="gpu", logger=wandb_logger)

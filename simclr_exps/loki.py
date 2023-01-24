@@ -35,6 +35,32 @@ def loki_ste_predict(probs, dists):
     loki = LokiStraightThroughEstimator()
     return loki.apply(probs, dists)
 
+class LokiNegIdenEstimator(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, probs: torch.FloatTensor, dists: torch.FloatTensor):
+        k = dists.shape[0]
+        onehot = torch.eye(k).cuda()
+        
+        # Compute S(x) = vector of negative Fréchet variances
+        s = -probs @ (dists ** 2)
+
+        # Intermediate decoding step
+        with torch.no_grad():
+            z_hat_int = s.argmax(dim=1)
+            z_hat_onehot = onehot[z_hat_int]
+
+        # Important to ensure that z_hat_smoothed gets gradients from the loss
+        z_hat_onehot.requires_grad = True
+        return z_hat_onehot
+    
+    @staticmethod
+    def backward(ctx, grad_output: torch.FloatTensor):
+        return -grad_output, None, None
+    
+def loki_negiden_predict(probs, dists):
+    loki = LokiNegIdenEstimator()
+    return loki.apply(probs, dists)
+
 
 def proj_simplex(y):
     ''' From http://www.mcduplessis.com/index.php/2016/08/22/fast-projection-onto-a-simplex-python/

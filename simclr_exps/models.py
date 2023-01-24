@@ -5,7 +5,7 @@ import torch
 from torchmetrics import Accuracy
 from metrics import MeanSquaredDistance
 from torch import optim
-from loki import loki_ste_predict, loki_polytope_predict
+from loki import loki_ste_predict, loki_polytope_predict, loki_negiden_predict
 
 class SingleLayerModel(pl.LightningModule):
     def __init__(self, emb_size, k, dists):
@@ -57,11 +57,13 @@ class SingleLayerModel(pl.LightningModule):
     
 
 class SingleLayerLokiModel(pl.LightningModule):
-    def __init__(self, emb_size, k, dists, model=None, ste=False):
+    def __init__(self, emb_size, k, dists, model=None, 
+                 ste=False, negiden=False):
         super().__init__()
         self.emb_size = emb_size
         self.k = k
         self.ste = ste
+        self.negiden = negiden
 
         if model is None:
             self.model = nn.Sequential(nn.Linear(emb_size, k))
@@ -80,6 +82,8 @@ class SingleLayerLokiModel(pl.LightningModule):
         probs = logits.softmax(dim=1)
         if self.ste:
             preds = loki_ste_predict(probs, self.dists)
+        elif self.negiden:
+            preds = loki_negiden_predict(probs, self.dists)
         else:
             preds = loki_polytope_predict(probs, self.dists)
         eps = 0.0001
