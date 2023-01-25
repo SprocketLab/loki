@@ -8,6 +8,8 @@ from torch.utils.data import random_split, DataLoader, TensorDataset
 from torch.autograd import Variable
 from torchvision import transforms
 
+from cifar_tree_parsing import CIFARTreeParser
+
 
 np.random.seed(42)
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -121,19 +123,15 @@ class CIFAR100(pl.LightningDataModule):
         self.num_classes = 100
 
         ## Load tree structure and label info ##
-        T = nx.Graph()
-
-        with open(f"{self.basedir}/cifar_"+tree_structure+".txt", "r") as f:
-            for line in f.readlines():
-                nodes = line.split()
-                for node in nodes:
-                    if node not in T:
-                        T.add_node(node)
-                T.add_edge(*nodes)
-                
-        leaves = [x for x in T.nodes() if T.degree(x) == 1]
+        assert tree_structure in ['parent_child', 'hierarchy']
+        tree_parser = CIFARTreeParser()
+        if tree_structure == 'parent_child':
+            T, _ = tree_parser.get_parent_child_tree()
+        else: 
+            T, _, _ = tree_parser.get_hierarchy_tree()
+        
+        leaves = tree_parser.labels_id
         full_labels_loc = np.array(leaves)
-        length = dict(nx.all_pairs_shortest_path_length(T))
 
         ## Compute distance matrix ##
         print("compute distance matrix")
@@ -142,20 +140,13 @@ class CIFAR100(pl.LightningDataModule):
         sampled_classes = np.sort(sampled_classes)  
 
         # NOTE important to implement a self.distance_matrix
-        self.distance_matrix = np.zeros(
-            (len(full_labels_loc), len(full_labels_loc)))
-
-        for i, each_class_loc_i in enumerate(full_labels_loc):
-            for j, each_class_loc_j in enumerate(full_labels_loc):
-                distance = length[each_class_loc_i][each_class_loc_j]
-                self.distance_matrix[i][j] = distance
+        self.distance_matrix = tree_parser.compute_dist_matrix(T, leaves)
     
     def prepare_data(self):
         x_train = np.load(f"{self.basedir}/cifar_embeddings/cifar100_train_X.npy")
         y_train = np.load(f"{self.basedir}/cifar_embeddings/cifar100_train_y.npy")
         x_val = np.load(f"{self.basedir}/cifar_embeddings/cifar100_test_X.npy")
         y_val = np.load(f"{self.basedir}/cifar_embeddings/cifar100_test_y.npy")
-
         n_train = y_train.shape[0] # 50_000
         n_val = y_val.shape[0] # 50_000
 
