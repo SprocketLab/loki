@@ -5,7 +5,8 @@ import torch
 from torchmetrics import Accuracy
 from metrics import MeanSquaredDistance
 from torch import optim
-from loki import loki_ste_predict, loki_polytope_predict, loki_negiden_predict
+from loki import loki_ste_predict, loki_polytope_predict
+from loki import loki_negiden_predict, loki_exact_predict
 
 class SingleLayerModel(pl.LightningModule):
     def __init__(self, emb_size, k, dists):
@@ -14,7 +15,12 @@ class SingleLayerModel(pl.LightningModule):
         self.k = k
         self.dists = torch.Tensor(dists).cuda()
 
-        self.model = nn.Sequential(nn.Linear(emb_size, k))
+        self.model = nn.Sequential(
+                nn.Linear(emb_size, 2 * emb_size), 
+                nn.ReLU(), 
+                nn.Linear(2 * emb_size, emb_size), 
+                nn.ReLU(), 
+                nn.Linear(emb_size, k))
         self.loss = nn.CrossEntropyLoss()
 
     def training_step(self, batch, batch_idx):
@@ -66,7 +72,12 @@ class SingleLayerLokiModel(pl.LightningModule):
         self.negiden = negiden
 
         if model is None:
-            self.model = nn.Sequential(nn.Linear(emb_size, k))
+            self.model = nn.Sequential(
+                nn.Linear(emb_size, 2 * emb_size), 
+                nn.ReLU(), 
+                nn.Linear(2 * emb_size, emb_size), 
+                nn.ReLU(), 
+                nn.Linear(emb_size, k))
         else: 
             self.model = model
 
@@ -80,24 +91,26 @@ class SingleLayerLokiModel(pl.LightningModule):
         logits = self.model(x)
         # Loki
         probs = logits.softmax(dim=1)
-        if self.ste:
-            preds = loki_ste_predict(probs, self.dists)
-        elif self.negiden:
-            preds = loki_negiden_predict(probs, self.dists)
-        else:
-            preds = loki_polytope_predict(probs, self.dists)
-        eps = 0.0001
-        smooth_onehot = torch.ones(self.k, self.k) * (1 / (self.k - 1)) * eps
-        smooth_onehot += torch.eye(self.k) * ((1 - eps) \
-                                               - (1 / (self.k - 1)) * eps)
-        smooth_onehot = smooth_onehot.cuda()
-        preds_smoothed = preds @ smooth_onehot
+        # if self.ste:
+        #     preds = loki_ste_predict(probs, self.dists)
+        # elif self.negiden:
+        #     preds = loki_negiden_predict(probs, self.dists)
+        # else:
+        #     preds = loki_polytope_predict(probs, self.dists)
+        logits = loki_exact_predict(probs, self.dists)
+        # DOES THIS WORK???
+        # eps = 0.0001
+        # smooth_onehot = torch.ones(self.k, self.k) * (1 / (self.k - 1)) * eps
+        # smooth_onehot += torch.eye(self.k) * ((1 - eps) \
+        #                                        - (1 / (self.k - 1)) * eps)
+        # smooth_onehot = smooth_onehot.cuda()
+        # preds_smoothed = preds @ smooth_onehot
         #loss_loki = self.loss_loki( # self training
         #    torch.log(preds_smoothed), logits.argmax(dim=1))
-        loss_loki = self.loss_loki(torch.log(preds_smoothed), y)
+        #loss_loki = self.loss_loki(torch.log(preds_smoothed), y)
         #loss = self.loss_clf(logits, y) + loss_loki
-        loss = loss_loki
-        return loss, preds, y
+        loss = self.loss_clf(logits, y)
+        return loss, logits.softmax(dim=1), y
 
     def training_step(self, batch, batch_idx):
         loss, _, _ = self.forward_loki(batch)
