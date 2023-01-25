@@ -92,7 +92,6 @@ optimizer = torch.optim.Adam(model.parameters(), lr=lr, betas=betas, eps=eps, we
 #eval train (1 loop)
 for epoch in tqdm(range(n_epoch)):
     evaluate(epoch, model)
-    running_loss = 0.
     model.train()
     for images, targets in tqdm(train_dataloader):
         optimizer.zero_grad()
@@ -101,7 +100,7 @@ for epoch in tqdm(range(n_epoch)):
 
         logits = get_logits(model, images, label_text)
         probs = logits.softmax(dim=1).float()
-        preds = loki_loss.loki_polytope_predict(probs, distances)
+        preds = loki_loss.loki_ste_predict(probs, distances)
         
         # Apply "label smoothing" to the hard predictions
         eps = 0.001
@@ -114,10 +113,6 @@ for epoch in tqdm(range(n_epoch)):
         loss = loss_fn(logs, targets)
         loss.backward()
         optimizer.step()
-        running_loss += loss.item() * targets.size(0)
-
-    epoch_loss = running_loss / len(train_dataset)
-    print("Epoch {} train loss: {:.3f}".format(epoch+1, epoch_loss))
 
 torch.save({
     'model_state_dict': model.state_dict(),
