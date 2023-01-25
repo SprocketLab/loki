@@ -3,7 +3,7 @@ import torch
 import pytorch_lightning as pl
 
 from pytorch_lightning.loggers import WandbLogger
-from datasets import ImageNetSubset, CIFAR100
+from datasets import ImageNetSubset, CIFAR100, AnimalKingdom
 from models import SingleLayerModel, SingleLayerLokiModel
 
 def main(data="imagenet", epochs=10, 
@@ -18,6 +18,11 @@ def main(data="imagenet", epochs=10,
 
     if data == "imagenet":
         dataset = ImageNetSubset(
+            batch_size=batch_size, 
+            test_batch_size=test_batch_size)
+        print(f"USING DATASET={data}")
+    elif data == "animalkingdom":
+        dataset = AnimalKingdom(
             batch_size=batch_size, 
             test_batch_size=test_batch_size)
         print(f"USING DATASET={data}")
