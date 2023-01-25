@@ -15,7 +15,12 @@ class SingleLayerModel(pl.LightningModule):
         self.k = k
         self.dists = torch.Tensor(dists).cuda()
 
-        self.model = nn.Sequential(nn.Linear(emb_size, k))
+        self.model = nn.Sequential(
+                nn.Linear(emb_size, 2 * emb_size), 
+                nn.ReLU(), 
+                nn.Linear(2 * emb_size, emb_size), 
+                nn.ReLU(), 
+                nn.Linear(emb_size, k))
         self.loss = nn.CrossEntropyLoss()
 
     def training_step(self, batch, batch_idx):
@@ -67,7 +72,12 @@ class SingleLayerLokiModel(pl.LightningModule):
         self.negiden = negiden
 
         if model is None:
-            self.model = nn.Sequential(nn.Linear(emb_size, k))
+            self.model = nn.Sequential(
+                nn.Linear(emb_size, 2 * emb_size), 
+                nn.ReLU(), 
+                nn.Linear(2 * emb_size, emb_size), 
+                nn.ReLU(), 
+                nn.Linear(emb_size, k))
         else: 
             self.model = model
 

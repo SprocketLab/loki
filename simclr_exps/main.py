@@ -33,7 +33,7 @@ def main(data="imagenet", epochs=10,
 
     if pretraining:
         print("⚡" * 20 + " TRAINING " + "⚡" * 20)
-        trainer = pl.Trainer(max_epochs=10, 
+        trainer = pl.Trainer(max_epochs=100, 
                             enable_checkpointing=False, 
                             accelerator="gpu", logger=wandb_logger)
         trainer.fit(model, train_loader, valid_loader)
@@ -45,7 +45,7 @@ def main(data="imagenet", epochs=10,
                                  dists=dataset.distance_matrix,
                                  model=model.model,
                                  ste=ste, negiden=negiden)
-    trainer_ft = pl.Trainer(max_epochs=10_000, 
+    trainer_ft = pl.Trainer(max_epochs=100, 
                          enable_checkpointing=False, 
                          accelerator="gpu", logger=wandb_logger)
     trainer_ft.fit(model_ft, train_loader, valid_loader)
