@@ -45,7 +45,7 @@ def main(data="imagenet", epochs=10,
                                  dists=dataset.distance_matrix,
                                  model=model.model,
                                  ste=ste, negiden=negiden)
-    trainer_ft = pl.Trainer(max_epochs=100_000, 
+    trainer_ft = pl.Trainer(max_epochs=10_000, 
                          enable_checkpointing=False, 
                          accelerator="gpu", logger=wandb_logger)
     trainer_ft.fit(model_ft, train_loader, valid_loader)

@@ -9,6 +9,27 @@ from sklearn.manifold import MDS
 from scipy.spatial.distance import cdist
 from numpy import typing as npt
 
+class LokiExact(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, probs: torch.FloatTensor, dists: torch.FloatTensor):
+        k = dists.shape[0]
+        
+        # Compute S(x) = vector of negative Fréchet variances
+        s = -probs @ (dists ** 2)
+        #print(s.shape)
+        print(s)
+        return s
+    
+    @staticmethod
+    def backward(ctx, grad_output: torch.FloatTensor):
+        return grad_output, None, None
+    
+def loki_exact_predict(probs, dists):
+    #loki = LokiExact()
+    #return loki.apply(probs, dists)
+    s = -probs @ (dists ** 2)
+    return s
+
 class LokiStraightThroughEstimator(torch.autograd.Function):
     @staticmethod
     def forward(ctx, probs: torch.FloatTensor, dists: torch.FloatTensor):
