@@ -3,15 +3,15 @@ import torch
 import pytorch_lightning as pl
 
 from pytorch_lightning.loggers import WandbLogger
-from datasets import ImageNetSubset
+from datasets import ImageNetSubset, CIFAR100
 from models import SingleLayerModel, SingleLayerLokiModel
 
 def main(data="imagenet", epochs=10, 
          batch_size=128, test_batch_size=512, ste=False, negiden=False,
          pretraining=True):
     
-    print(f"USING STE={ste}")
-    print(f"USING NEGIDEN={negiden}")
+    #print(f"USING STE={ste}")
+    #print(f"USING NEGIDEN={negiden}")
     
     torch.set_float32_matmul_precision('medium')
     wandb_logger = WandbLogger(name='Nick', project='Loki')
@@ -20,6 +20,12 @@ def main(data="imagenet", epochs=10,
         dataset = ImageNetSubset(
             batch_size=batch_size, 
             test_batch_size=test_batch_size)
+        print(f"USING DATASET={data}")
+    elif data == "cifar100":
+        dataset = CIFAR100(
+            batch_size=batch_size, 
+            test_batch_size=test_batch_size)
+        print(f"USING DATASET={data}")
     else:
         raise NotImplementedError
     
