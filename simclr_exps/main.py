@@ -5,8 +5,9 @@ import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
 from datasets import ImageNetSubset, CIFAR100, AnimalKingdom
 from models import SingleLayerModel, SingleLayerLokiModel
+from models import MultiLayerModel, MultiLayerLokiModel
 
-def main(data="imagenet", epochs=10, 
+def main(data="imagenet",
          batch_size=128, test_batch_size=512, ste=False, negiden=False,
          pretraining=True):
     
@@ -20,21 +21,33 @@ def main(data="imagenet", epochs=10,
         dataset = ImageNetSubset(
             batch_size=batch_size, 
             test_batch_size=test_batch_size)
+        ModelPre = SingleLayerModel
+        ModelFt = SingleLayerLokiModel
+        epochs = 100
+        epochs_ft = 100
         print(f"USING DATASET={data}")
     elif data == "animalkingdom":
         dataset = AnimalKingdom(
             batch_size=batch_size, 
             test_batch_size=test_batch_size)
+        ModelPre = SingleLayerModel
+        ModelFt = SingleLayerLokiModel
+        epochs = 20
+        epochs_ft = 100
         print(f"USING DATASET={data}")
     elif data == "cifar100":
         dataset = CIFAR100(
             batch_size=batch_size, 
             test_batch_size=test_batch_size)
+        ModelPre = SingleLayerModel
+        ModelFt = SingleLayerLokiModel
+        epochs = 10
+        epochs_ft = 100
         print(f"USING DATASET={data}")
     else:
         raise NotImplementedError
     
-    model = SingleLayerModel(emb_size=dataset.emb_size, 
+    model = ModelPre(emb_size=dataset.emb_size, 
                              dists=dataset.distance_matrix,
                              k=dataset.num_classes)
     
@@ -44,21 +57,27 @@ def main(data="imagenet", epochs=10,
 
     if pretraining:
         print("⚡" * 20 + " TRAINING " + "⚡" * 20)
-        trainer = pl.Trainer(max_epochs=100, 
+        trainer = pl.Trainer(max_epochs=epochs, 
                             enable_checkpointing=False, 
                             accelerator="gpu", logger=wandb_logger)
         trainer.fit(model, train_loader, valid_loader)
+
+        print("EVALUATING UNDER BASELINE")
         trainer.test(model, test_loader)
 
     print("⚡" * 20 + " FINE TUNING " + "⚡" * 20)
-    model_ft = SingleLayerLokiModel(emb_size=dataset.emb_size, 
+    model_ft = ModelFt(emb_size=dataset.emb_size, 
                                  k=dataset.num_classes,  
                                  dists=dataset.distance_matrix,
                                  model=model.model,
                                  ste=ste, negiden=negiden)
-    trainer_ft = pl.Trainer(max_epochs=100, 
+    trainer_ft = pl.Trainer(max_epochs=epochs_ft, 
                          enable_checkpointing=False, 
                          accelerator="gpu", logger=wandb_logger)
+    
+    print("EVALUATING UNDER LOKI")
+    trainer_ft.test(model_ft, test_loader)
+
     trainer_ft.fit(model_ft, train_loader, valid_loader)
     trainer_ft.test(model_ft, test_loader)
 
