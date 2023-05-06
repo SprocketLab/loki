@@ -8,3 +8,6 @@ fine_tuning/model_checkpoint
 **/wandb/*
 *.npy
 *.zip
+*.pt
+pubmed/*.csv
+pubmed/*.json

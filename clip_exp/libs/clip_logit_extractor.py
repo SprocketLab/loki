@@ -14,7 +14,7 @@ class CLIPLogitExtractor:
     
     def extract_label_text_features(self, label_text):
         zeroshot_weights = []
-        for label_t in label_text:
+        for label_t in tqdm(label_text):
             texts = clip.tokenize(label_t).to(device)
             class_embeddings = self.model.encode_text(texts)
             class_embeddings /= class_embeddings.norm(dim=-1, keepdim=True)
@@ -39,6 +39,8 @@ class CLIPLogitExtractor:
         image_features_all = image_features_all.squeeze()
         text_features_all = self.extract_label_text_features(label_text)
         logits = (100. * image_features_all @ text_features_all).softmax(dim=-1).detach().cpu()
+        torch.save(logits, 'logits.pt')
+        torch.save(torch.Tensor(y_true_all), 'y.pt')
         return logits, y_true_all
     
     def get_preds(self, logits):

@@ -47,7 +47,7 @@ class TreeMetrics:
         T.add_node('root')
         labels = []
         mapping = {}
-        with open('../cifar100/cifar100_hierarchy.txt', 'r') as f:
+        with open('../cifar100/cifar_hierarchy.txt', 'r') as f:
             for line in f.readlines():
                 splitline = line.split('\t')
                 superclass = splitline[0]
@@ -69,7 +69,7 @@ class TreeMetrics:
     def get_parent_child_graph(self):
         T = nx.Graph()
         labels = []
-        with open('../cifar_parent_child.txt', 'r') as f:
+        with open('../cifar100/cifar_parent_child.txt', 'r') as f:
             for line in f.readlines():
                 nodes = line.split()
                 nodes = [int(node) for node in nodes]
