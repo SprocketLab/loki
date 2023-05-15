@@ -40,14 +40,14 @@ def calc_clip_tree_metric(dist_matrix, y_pred, y_true):
 if __name__ == '__main__':
     cifar100_test = utils.get_CIFAR100_test_set()
     class_to_idx = cifar100_test.class_to_idx
-    idx_to_class = {v: k for k, v in class_to_idx.items()}
-    labels_id = list(idx_to_class.keys())
+    # idx_to_class = {v: k for k, v in class_to_idx.items()}
+    # labels_id = list(idx_to_class.keys())
 
-    tree_metric = TreeMetrics()
-    T_pc, _ = tree_metric.get_parent_child_graph()
-    T_hierarchy, _, mapping = tree_metric.get_hierarchy_graph(class_to_idx)
-    T_random = tree_metric.get_random_graph(len(labels_id))
-    print('checking cifar100 map vs hierarchy map equivalence', utils.check_mapping_equivalence(idx_to_class, mapping))
+    # tree_metric = TreeMetrics()
+    # T_pc, _ = tree_metric.get_parent_child_graph()
+    # T_hierarchy, _, mapping = tree_metric.get_hierarchy_graph(class_to_idx)
+    # T_random = tree_metric.get_random_graph(len(labels_id))
+    # print('checking cifar100 map vs hierarchy map equivalence', utils.check_mapping_equivalence(idx_to_class, mapping))
     label_text = ["a photo of a {}.".format(class_) for class_ in class_to_idx]
     
     # clip = CLIPLogitExtractor()
@@ -59,9 +59,10 @@ if __name__ == '__main__':
 
     if 'logits.pt' not in os.listdir('.'):
         logits, y_true = clip.get_logits(cifar100_test, label_text)
-    else:
-        logits = torch.load('logits.pt')
-        y_true = torch.load('y.pt').detach().cpu().numpy().tolist()
+    exit()
+    # else:
+    #     logits = torch.load('logits.pt')
+    #     y_true = torch.load('y.pt').detach().cpu().numpy().tolist()
     exit()
     preds = clip.get_preds(logits)
 
