@@ -63,7 +63,7 @@ y = Y_sparse[inds]
 X_train, X_test, Y_train, Y_test = train_test_split(X, y, test_size=0.1, random_state=42, stratify=y)
 
 
-print(X_train.shape, Y_train.shape, X_test.shape, Y_test.shape)
+print("Hello", X_train.shape, Y_train.shape, X_test.shape, Y_test.shape)
 
 ## train the knn model ##
 neigh = KNeighborsClassifier(n_neighbors=5)
@@ -85,7 +85,7 @@ for i in tqdm(range(0, Y_test.shape[0], batch_size), total=int(Y_test.shape[0] /
     print(pred_prob.shape, d[sampled_classes_index].shape)
     prediction_w_label_model = np.argmin(np.dot(pred_prob, d[sampled_classes_index]), axis=1)
     
-    for pred, pred_w_label_model, gt in zip(prediction, prediction_w_label_model, Y_test):
+    for pred, pred_w_label_model, gt in zip(prediction, prediction_w_label_model, Y_test[i : i + batch_size]):
         avg_squared_distance += d[pred][gt]
         avg_squared_distance_w_label_model += d[pred_w_label_model][gt]
     

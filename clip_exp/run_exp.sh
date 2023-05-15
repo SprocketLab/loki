@@ -1,1 +1,0 @@
-CUDA_AVAILABLE_DEVICES=1 python run_full_class.py

@@ -3,21 +3,27 @@ https://github.com/openai/CLIP#zero-shot-prediction
 '''
 from utils import utils
 import torch
-import clip
 from tqdm import tqdm
 import torchvision.transforms as transforms
+# from transformers import AlignModel, AlignProcessor
+from transformers import AltCLIPModel, AltCLIPProcessor
 
 device = utils.device
 
-class CLIPLogitExtractor:
+class ALIGNLogitExtractor:
     def __init__(self,):
-        self.model, self.preprocess = clip.load('RN50', device)
+        self.model = AltCLIPModel.from_pretrained("BAAI/AltCLIP")
+        # AlignModel.from_pretrained("kakaobrain/align-base")
+        self.preprocess = AltCLIPProcessor.from_pretrained("BAAI/AltCLIP")
+        # AlignProcessor.from_pretrained("kakaobrain/align-base")
     
     def extract_label_text_features(self, label_text):
         zeroshot_weights = []
         for label_t in tqdm(label_text):
-            texts = clip.tokenize(label_t).to(device)
-            class_embeddings = self.model.encode_text(texts)
+            # print(label_t)
+            noun_entity_inputs = self.preprocess(text=label_t, images=torch.rand(3,48,48), return_tensors="pt", max_length=16, padding='max_length')
+            clip_outputs = self.model(**noun_entity_inputs)
+            class_embeddings = clip_outputs.text_embeds
             class_embeddings /= class_embeddings.norm(dim=-1, keepdim=True)
             class_embedding = class_embeddings.mean(dim=0)
             class_embedding /= class_embedding.norm()
@@ -37,19 +43,19 @@ class CLIPLogitExtractor:
                 image = image[0]
                 t = transforms.ToPILImage()
                 image = t(image)
-            image_input = self.preprocess(image).unsqueeze(0).to(device)
-            with torch.no_grad():
-                image_feature = self.model.encode_image(image_input)
+            noun_entity_inputs = self.preprocess(text=['a'], images=image, return_tensors="pt", max_length=1, padding='max_length')
+            clip_outputs = self.model(**noun_entity_inputs)
+            image_feature = clip_outputs.image_embeds
             image_feature /= image_feature.norm()
-            image_features_all.append(image_feature)
+            image_features_all.append(image_feature.detach().cpu().numpy())
             y_true_all.append(y_true)
         image_features_all = torch.stack(image_features_all, dim=1).to(device)
         image_features_all = image_features_all.squeeze()
         if label_text != None:
             text_features_all = self.extract_label_text_features(label_text)
         logits = (100. * image_features_all @ text_features_all).softmax(dim=-1).detach().cpu()
-        torch.save(logits, 'logits.pt')
-        torch.save(torch.Tensor(y_true_all), 'y.pt')
+        torch.save(logits, 'logits_align.pt')
+        torch.save(torch.Tensor(y_true_all), 'y_align.pt')
         return logits, y_true_all
     
     def get_preds(self, logits):

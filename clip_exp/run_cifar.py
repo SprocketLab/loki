@@ -1,6 +1,6 @@
 from utils import utils
 import numpy as np
-from libs import TreeMetrics, CLIPLogitExtractor
+from libs import TreeMetrics, ALIGNLogitExtractor
 import os
 import torch 
 from tqdm import tqdm
@@ -49,16 +49,20 @@ if __name__ == '__main__':
     T_random = tree_metric.get_random_graph(len(labels_id))
     print('checking cifar100 map vs hierarchy map equivalence', utils.check_mapping_equivalence(idx_to_class, mapping))
     label_text = ["a photo of a {}.".format(class_) for class_ in class_to_idx]
-    clip = CLIPLogitExtractor()
     
-    labels_emb = clip.extract_label_text_features(label_text)
-    sq_clip_dist_matrix = calc_clip_sq_dist_matrix(labels_emb)
+    # clip = CLIPLogitExtractor()
+    clip = ALIGNLogitExtractor()
+    # print('here')
+    # exit()
+    # labels_emb = clip.extract_label_text_features(label_text)
+    # sq_clip_dist_matrix = calc_clip_sq_dist_matrix(labels_emb)
 
     if 'logits.pt' not in os.listdir('.'):
         logits, y_true = clip.get_logits(cifar100_test, label_text)
     else:
         logits = torch.load('logits.pt')
         y_true = torch.load('y.pt').detach().cpu().numpy().tolist()
+    exit()
     preds = clip.get_preds(logits)
 
     error_rate_vanilla = (preds != y_true).mean()

@@ -2,6 +2,7 @@ from torchvision.datasets import CIFAR100
 import torch
 import os
 
+
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 def get_CIFAR100_test_set():
